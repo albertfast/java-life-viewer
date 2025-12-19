@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: java-life-viewer
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000

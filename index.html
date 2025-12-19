@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conway's Game of Life - Java + Trefoil Knot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 2px;
+        }
+        
+        .panel {
+            flex: 1;
+            border: 2px solid #0f0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            background: #0f0;
+            color: #000;
+            padding: 10px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        #terminal {
+            flex: 1;
+            overflow-y: auto;
+            background: #001100;
+            padding: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #gif-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #001100;
+        }
+        
+        #gif {
+            max-width: 100%;
+            max-height: 100%;
+            border: 1px solid #0f0;
+        }
+        
+        .status {
+            background: #003300;
+            padding: 5px;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #0f0;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #001100;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sol Panel - Java Terminal -->
+        <div class="panel">
+            <div class="panel-header">
+                ⚡ JAVA GAME OF LIFE - LIVE TERMINAL
+            </div>
+            <div id="terminal"></div>
+            <div class="status">
+                <span class="indicator"></span>
+                <span id="status">Connecting...</span>
+            </div>
+        </div>
+        
+        <!-- Sağ Panel - GIF -->
+        <div class="panel">
+            <div class="panel-header">
+                🌀 TREFOIL KNOT - CONWAY'S GAME OF LIFE ANIMATION
+            </div>
+            <div id="gif-container">
+                <img id="gif" src="/static/trefoil_knot_conway.gif" alt="Trefoil Knot Animation">
+            </div>
+            <div class="status">
+                CC BY-SA 4.0 - Raphaelaugusto via Wikimedia Commons
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const status = document.getElementById('status');
+        
+        // WebSocket bağlantısı
+        const ws = new WebSocket('ws://localhost:8000/ws');
+        
+        ws.onopen = () => {
+            status.textContent = 'Running...';
+        };
+        
+        ws.onmessage = (event) => {
+            terminal.textContent += event.data;
+            terminal.scrollTop = terminal.scrollHeight;
+        };
+        
+        ws.onerror = (error) => {
+            status.textContent = 'Connection Error';
+            terminal.textContent += '\n[ERROR] WebSocket connection failed\n';
+        };
+        
+        ws.onclose = () => {
+            status.textContent = 'Disconnected';
+            terminal.textContent += '\n[INFO] Connection closed\n';
+        };
+    </script>
+</body>
+</html>
