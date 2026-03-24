@@ -1,0 +1,18 @@
+{
+    "chat.allowAnonymousAccess": true,
+    "inlineChat.enableV2": true,
+    "chat.mcp.discovery.enabled": {
+        "claude-desktop": true,
+        "windsurf": true,
+        "cursor-global": true,
+        "cursor-workspace": true
+    },
+    "chat.mcp.gallery.enabled": true,
+    "chat.mcp.assisted.nuget.enabled": true,
+    "chat.editing.explainChanges.enabled": true,
+    "chat.unifiedAgentsBar.enabled": true,
+    "chat.restoreLastPanelSession": true,
+    "chat.viewProgressBadge.enabled": true,
+    "chat.tools.terminal.sandbox.enabled": true,
+    "inlineChat.notebookAgent": true
+}
