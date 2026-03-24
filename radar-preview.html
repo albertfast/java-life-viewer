@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Immersive Radar Preview</title>
+  <style>
+    :root {
+      --bg-0: #030815;
+      --bg-1: #071228;
+      --panel: rgba(5, 16, 38, 0.9);
+      --panel-edge: rgba(47, 149, 220, 0.22);
+      --teal: #53e4df;
+      --teal-soft: rgba(83, 228, 223, 0.2);
+      --cyan: #4cb7ff;
+      --cyan-soft: rgba(76, 183, 255, 0.18);
+      --ink: #081120;
+      --text: #eef8ff;
+      --muted: #8eb7d6;
+      --danger: #ff6767;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(76, 183, 255, 0.12), transparent 28%),
+        radial-gradient(circle at 80% 82%, rgba(83, 228, 223, 0.12), transparent 32%),
+        linear-gradient(180deg, #081326 0%, #030815 100%);
+    }
+
+    .frame {
+      width: min(94vw, 1180px);
+      min-height: min(92vh, 880px);
+      padding: 26px;
+      border-radius: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        linear-gradient(180deg, rgba(7, 18, 40, 0.96), rgba(3, 8, 21, 0.98));
+      box-shadow:
+        0 40px 120px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(340px, 1fr) 290px;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .card,
+    .aside {
+      position: relative;
+      border-radius: 28px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(7, 19, 44, 0.96), rgba(4, 10, 28, 0.97));
+      border: 1px solid var(--panel-edge);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    .card {
+      min-height: 760px;
+      padding: 26px;
+      background:
+        radial-gradient(circle at 78% 12%, rgba(83, 228, 223, 0.12), transparent 22%),
+        radial-gradient(circle at 28% 26%, rgba(76, 183, 255, 0.11), transparent 28%),
+        linear-gradient(180deg, rgba(3, 10, 35, 0.98), rgba(3, 9, 27, 0.98));
+    }
+
+    .aside {
+      padding: 20px;
+      display: grid;
+      align-content: start;
+      gap: 16px;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 18px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #49b6ff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 4vw, 54px);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+
+    .subcopy {
+      max-width: 460px;
+      margin-top: 14px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .pill-row {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pill,
+    .mini-pill,
+    .control-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(83, 228, 223, 0.18);
+      background: rgba(2, 9, 24, 0.72);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .pill {
+      padding: 14px 18px;
+    }
+
+    .mini-pill {
+      padding: 12px 16px;
+      font-weight: 600;
+      background: rgba(6, 14, 32, 0.86);
+    }
+
+    .mini-pill.active {
+      color: #062230;
+      background: linear-gradient(180deg, #64e6e3, #49cbc6);
+      border-color: transparent;
+      box-shadow: 0 10px 30px rgba(83, 228, 223, 0.25);
+    }
+
+    .hud-actions {
+      position: relative;
+      padding: 18px;
+      border-radius: 0 0 0 88px;
+      background: radial-gradient(circle at top right, rgba(100, 230, 227, 0.22), rgba(100, 230, 227, 0.08));
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: end;
+      min-width: 248px;
+    }
+
+    .stage-wrap {
+      position: relative;
+      min-height: 620px;
+      display: grid;
+      place-items: center;
+      margin-top: 14px;
+    }
+
+    .glow-orb {
+      position: absolute;
+      inset: auto;
+      width: min(64vw, 620px);
+      height: min(64vw, 620px);
+      max-width: 74%;
+      max-height: 74%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(21, 74, 117, 0.44), rgba(5, 23, 48, 0.58) 58%, rgba(4, 11, 28, 0.12) 72%, transparent 100%);
+      box-shadow:
+        inset 0 0 80px rgba(56, 148, 255, 0.08),
+        0 0 140px rgba(83, 228, 223, 0.08);
+      filter: blur(0.2px);
+    }
+
+    canvas {
+      width: min(76vmin, 760px);
+      height: min(76vmin, 760px);
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      position: relative;
+      z-index: 2;
+    }
+
+    .legend {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 18px;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+    }
+
+    .legend-strip {
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: rgba(2, 10, 27, 0.76);
+      border: 1px solid rgba(83, 228, 223, 0.14);
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .stat-card {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(83, 228, 223, 0.14);
+      background: linear-gradient(180deg, rgba(7, 20, 42, 0.86), rgba(4, 11, 28, 0.84));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-title {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      margin-top: 10px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .stat-meta {
+      margin-top: 8px;
+      color: #73d9d1;
+      font-size: 13px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .panel-copy {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .control-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      appearance: none;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 0;
+      background: linear-gradient(180deg, #7af2ef, #4bc2ff);
+      box-shadow: 0 0 0 4px rgba(83, 228, 223, 0.14);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 0;
+      background: linear-gradient(180deg, #7af2ef, #4bc2ff);
+      box-shadow: 0 0 0 4px rgba(83, 228, 223, 0.14);
+      cursor: pointer;
+    }
+
+    .control-toggle {
+      justify-content: space-between;
+      padding: 14px 16px;
+    }
+
+    .control-toggle input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .aside-note {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(83, 228, 223, 0.08);
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .link {
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    @media (max-width: 980px) {
+      .frame {
+        width: 100vw;
+        min-height: 100vh;
+        border-radius: 0;
+        padding: 14px;
+      }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        min-height: 720px;
+      }
+
+      .hud {
+        flex-direction: column;
+      }
+
+      .hud-actions {
+        min-width: 0;
+        width: 100%;
+        border-radius: 22px;
+        justify-content: start;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <div class="shell">
+      <section class="card">
+        <div class="hud">
+          <div>
+            <p class="eyebrow">Immersive Radar</p>
+            <h1>Live 3D Radar</h1>
+            <p class="subcopy">
+              Mobil uygulama ve GIF çıktısı için sadeleştirilmiş sürüm: daha temiz radar düzlemi, daha az partikül ve daha kontrollü hareket.
+            </p>
+            <div class="pill-row">
+              <div class="pill">Live sweep</div>
+              <div class="pill" id="statusPill">Adaptive scan</div>
+            </div>
+          </div>
+
+          <div class="hud-actions">
+            <div class="mini-pill active">3D</div>
+            <div class="mini-pill" id="muteBadge">Mute</div>
+            <div class="mini-pill">Scanning</div>
+          </div>
+        </div>
+
+        <div class="stage-wrap">
+          <div class="glow-orb"></div>
+          <canvas id="radar"></canvas>
+          <div class="legend">
+            <div class="legend-strip">
+              Volumetric shell · contour rings · particle cloud · sweep beam
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card">
+            <div class="stat-title">Sweep Arc</div>
+            <div class="stat-value" id="arcMetric">54°</div>
+            <div class="stat-meta">Dynamic beam aperture</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-title">Target Density</div>
+            <div class="stat-value" id="densityMetric">34</div>
+            <div class="stat-meta">Minimal particle echoes</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-title">Threat Bias</div>
+            <div class="stat-value" id="threatMetric">Nominal</div>
+            <div class="stat-meta">Color mix / pulse intensity</div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="aside">
+        <div>
+          <p class="eyebrow">Scene Tuning</p>
+          <h2 class="panel-title">Radar Controls</h2>
+        </div>
+
+        <p class="panel-copy">
+          Kontroller sahnenin yoğunluğunu, sweep genişliğini, kırmızı tehdit karışımını ve hareket temposunu değiştirir. Amaç düz bir radar değil, ürün seviyesi düşünülmüş bir “immersive system” hissi vermek.
+        </p>
+
+        <label class="control-group">
+          <div class="control-label">
+            <span>Signal Level</span>
+            <span id="signalValue">0.82</span>
+          </div>
+          <input id="signal" type="range" min="0" max="1" step="0.01" value="0.82">
+        </label>
+
+        <label class="control-group">
+          <div class="control-label">
+            <span>Danger Level</span>
+            <span id="dangerValue">0.08</span>
+          </div>
+          <input id="danger" type="range" min="0" max="1" step="0.01" value="0.08">
+        </label>
+
+        <label class="control-group">
+          <div class="control-label">
+            <span>Rotation Speed</span>
+            <span id="speedValue">1.10x</span>
+          </div>
+          <input id="speed" type="range" min="0.2" max="2.2" step="0.01" value="1.1">
+        </label>
+
+        <label class="control-toggle">
+          <span>Pulse enabled</span>
+          <input id="pulse" type="checkbox" checked>
+        </label>
+
+        <label class="control-toggle">
+          <span>Paused</span>
+          <input id="paused" type="checkbox">
+        </label>
+
+        <div class="aside-note">
+          Native Android renderer değil; ama bu sürüm özellikle daha hafif mobil kullanım ve sonradan GIF kaydı için bilinçli şekilde sade tutuldu.
+        </div>
+
+        <div class="aside-note">
+          Açılış adresi:
+          <a class="link" href="/static/radar-preview.html">/static/radar-preview.html</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("radar");
+    const ctx = canvas.getContext("2d");
+
+    const signalInput = document.getElementById("signal");
+    const dangerInput = document.getElementById("danger");
+    const speedInput = document.getElementById("speed");
+    const pulseInput = document.getElementById("pulse");
+    const pausedInput = document.getElementById("paused");
+
+    const signalValue = document.getElementById("signalValue");
+    const dangerValue = document.getElementById("dangerValue");
+    const speedValue = document.getElementById("speedValue");
+    const arcMetric = document.getElementById("arcMetric");
+    const densityMetric = document.getElementById("densityMetric");
+    const threatMetric = document.getElementById("threatMetric");
+    const statusPill = document.getElementById("statusPill");
+    const muteBadge = document.getElementById("muteBadge");
+
+    const LOOP_SECONDS = 5;
+    const LOOP_MS = LOOP_SECONDS * 1000;
+    const TAU = Math.PI * 2;
+
+    const state = {
+      signal: Number(signalInput.value),
+      danger: Number(dangerInput.value),
+      speed: Number(speedInput.value),
+      pulseEnabled: pulseInput.checked,
+      paused: pausedInput.checked,
+      time: 0,
+      sweep: 0,
+      startMs: null,
+      pauseTime: 0
+    };
+
+    const particles = Array.from({ length: 72 }, (_, index) => ({
+      orbit: Math.random() * Math.PI * 2,
+      ring: 0.12 + Math.random() * 0.86,
+      altitude: -1 + Math.random() * 2,
+      size: 0.6 + Math.random() * 1.6,
+      twinkle: Math.random() * Math.PI * 2,
+      velocity: 0.08 + Math.random() * 0.24,
+      drift: (Math.random() - 0.5) * 0.22,
+      risk: ((index * 19) % 100) / 100,
+      family: index % 6
+    }));
+
+    function syncLabels() {
+      signalValue.textContent = state.signal.toFixed(2);
+      dangerValue.textContent = state.danger.toFixed(2);
+      speedValue.textContent = `${state.speed.toFixed(2)}x`;
+
+      const arc = Math.round(28 + state.signal * 22);
+      const density = Math.round(12 + state.signal * 34);
+
+      arcMetric.textContent = `${arc}°`;
+      densityMetric.textContent = String(density);
+      threatMetric.textContent =
+        state.danger > 0.72 ? "Critical" :
+        state.danger > 0.45 ? "Elevated" :
+        state.danger > 0.2 ? "Aware" : "Nominal";
+
+      statusPill.textContent = state.danger > 0.55 ? "Threat scan" : "Adaptive scan";
+      muteBadge.textContent = state.pulseEnabled ? "Audio on" : "Mute";
+    }
+
+    function resize() {
+      const size = Math.min(window.innerWidth * 0.72, window.innerHeight * 0.7, 760);
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = size * ratio;
+      canvas.height = size * ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+    }
+
+    function blend(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function rgba(parts, alpha) {
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+    }
+
+    function themeColors() {
+      const cool = [83, 228, 223];
+      const danger = [255, 103, 103];
+      const edge = [76, 183, 255];
+      return {
+        primary: [
+          blend(cool[0], danger[0], state.danger),
+          blend(cool[1], danger[1], state.danger * 0.72),
+          blend(cool[2], danger[2], state.danger * 0.52)
+        ],
+        edge
+      };
+    }
+
+    function ellipsePoint(cx, cy, radius, angle, squish, raise) {
+      const x = cx + Math.cos(angle) * radius;
+      const y = cy + Math.sin(angle) * radius * squish - raise;
+      return { x, y };
+    }
+
+    function drawVolumeShell(cx, cy, radius, squish) {
+      const shell = ctx.createRadialGradient(cx, cy - radius * 0.18, radius * 0.08, cx, cy, radius * 1.02);
+      shell.addColorStop(0, "rgba(18, 82, 128, 0.11)");
+      shell.addColorStop(0.56, "rgba(9, 36, 71, 0.19)");
+      shell.addColorStop(0.72, "rgba(7, 25, 49, 0.4)");
+      shell.addColorStop(1, "rgba(4, 14, 32, 0.07)");
+      ctx.fillStyle = shell;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(132, 232, 255, 0.18)";
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius - 1.5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(76, 183, 255, 0.13)";
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + radius * 0.08, radius * 0.9, radius * 0.31, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(83, 228, 223, 0.11)";
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radius * 0.62, radius * 0.96, 0, Math.PI * 0.12, Math.PI * 0.88);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(76, 183, 255, 0.08)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radius * 0.42, radius * 0.96, 0, Math.PI * 0.16, Math.PI * 0.84);
+      ctx.stroke();
+    }
+
+    function drawRadarPlane(cx, cy, radius, squish, colors) {
+      const grad = ctx.createRadialGradient(cx, cy, radius * 0.08, cx, cy, radius);
+      grad.addColorStop(0, rgba(colors.primary, 0.08));
+      grad.addColorStop(0.54, "rgba(7, 19, 42, 0.34)");
+      grad.addColorStop(1, "rgba(2, 10, 22, 0.95)");
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radius, radius * squish, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let i = 1; i <= 5; i++) {
+        const r = radius * (0.14 + i * 0.15);
+        ctx.strokeStyle = i === 5 ? "rgba(83, 228, 223, 0.15)" : "rgba(76, 183, 255, 0.14)";
+        ctx.lineWidth = i % 2 === 0 ? 1 : 0.8;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, r, r * squish, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8 + state.time * 0.02;
+        const outer = ellipsePoint(cx, cy, radius * 0.9, angle, squish, 0);
+        ctx.strokeStyle = "rgba(76, 183, 255, 0.08)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(outer.x, outer.y);
+        ctx.stroke();
+      }
+    }
+
+    function drawOrbitBands(cx, cy, radius, squish) {
+      for (let i = 0; i < 3; i++) {
+        const phase = state.time * (0.72 + i * 0.22) + i * 1.1;
+        const rx = radius * (0.28 + i * 0.19);
+        const ry = rx * (0.14 + i * 0.02);
+        const rotation = 0.08 + Math.sin(phase * 0.32) * 0.18;
+        const alpha = 0.07 + i * 0.03;
+
+        ctx.save();
+        ctx.translate(cx, cy - i * 2);
+        ctx.rotate(rotation);
+        ctx.strokeStyle = i % 2 === 0 ? `rgba(83, 228, 223, ${alpha})` : `rgba(76, 183, 255, ${alpha})`;
+        ctx.lineWidth = 1 + i * 0.12;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry / squish, 0, 0.08, Math.PI * 1.92);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function drawSweep(cx, cy, radius, squish, colors) {
+      const arc = 0.24 + state.signal * 0.18;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1, squish);
+      ctx.rotate(state.sweep);
+
+      const beam = ctx.createLinearGradient(0, 0, radius * 0.98, 0);
+      beam.addColorStop(0, rgba(colors.primary, 0));
+      beam.addColorStop(0.46, rgba(colors.edge, 0.03));
+      beam.addColorStop(1, rgba(colors.primary, 0.34));
+      ctx.fillStyle = beam;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, radius * 0.96, -arc * 0.5, arc * 0.5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = rgba([180, 250, 255], 0.82);
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(radius * 0.94, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPulse(cx, cy, radius, squish) {
+      if (!state.pulseEnabled) return;
+      for (let i = 0; i < 2; i++) {
+        const p = ((state.time / TAU) + i * 0.32) % 1;
+        const alpha = (1 - p) * (0.10 + state.signal * 0.06);
+        const r = radius * (0.14 + p * 0.82);
+        ctx.strokeStyle = `rgba(83, 228, 223, ${alpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, r, r * squish, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function drawParticles(cx, cy, radius, squish, colors) {
+      const count = Math.round(14 + state.signal * 32);
+      const threatGate = 0.08 + state.danger * 0.2;
+
+      for (let i = 0; i < count; i++) {
+        const p = particles[i];
+        const angle = p.orbit + state.time * p.velocity * state.speed + p.drift * Math.sin(state.time);
+        const ringRadius = radius * (0.14 + p.ring * 0.74);
+        const height = p.altitude * (10 + state.signal * 10);
+        const wave = Math.sin(state.time * 2 + p.twinkle + p.family) * 1.6;
+        const x = cx + Math.cos(angle) * ringRadius;
+        const y = cy + Math.sin(angle) * ringRadius * squish - height * 0.18 + wave;
+        const depthFade = 1 - Math.min(1, ringRadius / radius);
+        const energy = 0.46 + 0.54 * Math.sin(state.time * 2 + p.twinkle);
+        const isThreat = state.danger > 0.45 && p.risk < threatGate && i % 8 === 0;
+        const hue = isThreat ? [255, 103, 103] : colors.primary;
+        const baseSize = isThreat ? 2 + state.danger * 1.8 : 0.9 + p.size * 0.8;
+        const size = baseSize + energy * (isThreat ? 1.1 : 0.4);
+        const alpha = isThreat ? 0.34 + energy * 0.18 : 0.10 + depthFade * 0.16 + state.signal * 0.05;
+
+        ctx.shadowBlur = isThreat ? 10 : 5;
+        ctx.shadowColor = rgba(hue, isThreat ? 0.58 : 0.28);
+        ctx.fillStyle = rgba(hue, alpha);
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isThreat) {
+          ctx.strokeStyle = rgba(hue, 0.22 + energy * 0.18);
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.arc(x, y, size * 2.2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      ctx.shadowBlur = 0;
+    }
+
+    function drawCenterCore(cx, cy, colors) {
+      ctx.fillStyle = rgba(colors.primary, 0.12);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = rgba(colors.primary, 0.8);
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = rgba(colors.primary, 0.84);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function render(now = 0) {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const cx = w / 2;
+      const cy = h / 2 + h * 0.02;
+      const shellRadius = Math.min(w, h) * 0.33;
+      const radarRadius = shellRadius * 0.86;
+      const squish = 0.22;
+      const colors = themeColors();
+
+      ctx.clearRect(0, 0, w, h);
+
+      const stageGlow = ctx.createRadialGradient(cx, cy - shellRadius * 0.34, shellRadius * 0.12, cx, cy, shellRadius * 1.4);
+      stageGlow.addColorStop(0, "rgba(83, 228, 223, 0.08)");
+      stageGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = stageGlow;
+      ctx.fillRect(0, 0, w, h);
+
+      if (state.startMs === null) {
+        state.startMs = now;
+      }
+
+      if (!state.paused) {
+        const loopProgress = ((now - state.startMs) % LOOP_MS) / LOOP_MS;
+        state.time = loopProgress * TAU;
+        state.sweep = loopProgress * TAU;
+      }
+
+      drawVolumeShell(cx, cy, shellRadius, squish);
+      drawRadarPlane(cx, cy, radarRadius, squish, colors);
+      drawOrbitBands(cx, cy, radarRadius, squish);
+      drawPulse(cx, cy, radarRadius, squish);
+      drawParticles(cx, cy, radarRadius, squish, colors);
+      drawSweep(cx, cy, radarRadius, squish, colors);
+      drawCenterCore(cx, cy, colors);
+
+      requestAnimationFrame(render);
+    }
+
+    signalInput.addEventListener("input", (event) => {
+      state.signal = Number(event.target.value);
+      syncLabels();
+    });
+
+    dangerInput.addEventListener("input", (event) => {
+      state.danger = Number(event.target.value);
+      syncLabels();
+    });
+
+    speedInput.addEventListener("input", (event) => {
+      state.speed = Number(event.target.value);
+      syncLabels();
+    });
+
+    pulseInput.addEventListener("change", (event) => {
+      state.pulseEnabled = event.target.checked;
+      syncLabels();
+    });
+
+    pausedInput.addEventListener("change", (event) => {
+      state.paused = event.target.checked;
+      if (!state.paused) {
+        state.startMs = performance.now() - ((state.time / TAU) * LOOP_MS);
+      }
+    });
+
+    syncLabels();
+    resize();
+    render();
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>
